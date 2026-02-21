@@ -83,5 +83,5 @@ MIT License — feel free to use, modify, and share.
 ---
 
 <p align="center">
-  <i>Built with ✦ by Sandhu</i>
+  <i>Built by Sandhu Software</i>
 </p>
