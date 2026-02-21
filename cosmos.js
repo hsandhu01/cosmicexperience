@@ -3,12 +3,14 @@
    ============================================ */
 
 const CosmosEngine = (() => {
-  // ───── CONFIG ─────
-  const PARTICLE_COUNT = 800;
-  const STAR_COUNT = 200;
+  // ───── CONFIG (responsive) ─────
+  const isMobile = window.innerWidth <= 768;
+  const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+  const PARTICLE_COUNT = isMobile ? 300 : (isTablet ? 500 : 800);
+  const STAR_COUNT = isMobile ? 100 : 200;
   const SHOOTING_STAR_INTERVAL = 4000;
-  const CONNECTION_DIST = 120;
-  const MOUSE_RADIUS = 250;
+  const CONNECTION_DIST = isMobile ? 80 : 120;
+  const MOUSE_RADIUS = isMobile ? 150 : 250;
   const GRAVITY_STRENGTH = 0.08;
   const DAMPING = 0.97;
   const TRAIL_ALPHA = 0.08;

@@ -620,30 +620,89 @@ canvas {
     padding: 1rem;
   }
 
+  /* Stack header: logo on left, controls wrap below */
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .controls {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
   .ctrl-label {
     display: none;
   }
 
   .ctrl-btn {
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.8rem;
+    min-width: 44px;
+    justify-content: center;
   }
 
+  .ctrl-icon {
+    font-size: 1.1rem;
+  }
+
+  /* Bottom stats wrap */
   .bottom-bar {
-    gap: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    justify-content: center;
   }
 
   .welcome-title {
     letter-spacing: 0.15em;
+    font-size: clamp(1.5rem, 5vw, 3rem);
+  }
+
+  .welcome-sub {
+    font-size: 0.8rem;
+    padding: 0 1rem;
+  }
+
+  .welcome-hint {
+    font-size: 0.6rem;
+    padding: 0 1rem;
+    text-align: center;
+  }
+
+  /* Timer panel */
+  .timer-panel {
+    min-width: unset;
+    width: calc(100% - 2rem);
+    max-width: 360px;
+    padding: 1.5rem;
+  }
+
+  .timer-remaining {
+    font-size: 2rem;
+  }
+
+  /* Logo tagline */
+  .logo-tagline {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
+  #ui-overlay {
+    padding: 0.75rem;
+  }
+
   .controls {
-    gap: 0.25rem;
+    gap: 0.3rem;
+  }
+
+  .ctrl-btn {
+    padding: 0.5rem 0.65rem;
   }
 
   .bottom-bar {
-    gap: 1rem;
+    gap: 0.75rem 1.5rem;
   }
 
   .stat-label {
@@ -652,6 +711,64 @@ canvas {
 
   .stat-value {
     font-size: 0.7rem;
+  }
+
+  .logo-text {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+  }
+
+  .welcome-title {
+    font-size: clamp(1.2rem, 4.5vw, 2.5rem);
+    letter-spacing: 0.1em;
+  }
+
+  .timer-panel {
+    width: calc(100% - 1.5rem);
+    padding: 1.25rem;
+    border-radius: 1rem;
+  }
+
+  .timer-options {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .timer-option {
+    padding: 0.6rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .timer-remaining {
+    font-size: 1.8rem;
+  }
+}
+
+/* Touch-friendly: larger tap targets on touch devices */
+@media (pointer: coarse) {
+  .ctrl-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .timer-option {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timer-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timer-cancel {
+    min-height: 44px;
+    padding: 0.5rem 2rem;
   }
 }
 
