@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COSMOS — Interactive Aurora Experience</title>
+  <meta name="description" content="An immersive, interactive cosmic aurora particle experience. Explore the universe with your cursor." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loader">
+    <div class="loader-content">
+      <div class="loader-ring"></div>
+      <h1 class="loader-title">COSMOS</h1>
+      <p class="loader-subtitle">Initializing the Universe...</p>
+    </div>
+  </div>
+
+  <!-- Main Canvas -->
+  <canvas id="cosmos"></canvas>
+
+  <!-- Audio Visualizer Canvas (overlay) -->
+  <canvas id="audioViz"></canvas>
+
+  <!-- Aurora Overlay Canvas -->
+  <canvas id="aurora"></canvas>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">COSMOS</span>
+      </div>
+      <div class="controls">
+        <button id="btn-mode" class="ctrl-btn" title="Switch Mode">
+          <span class="ctrl-icon">◐</span>
+          <span class="ctrl-label">MODE</span>
+        </button>
+        <button id="btn-audio" class="ctrl-btn" title="Toggle Audio">
+          <span class="ctrl-icon">♫</span>
+          <span class="ctrl-label">AUDIO</span>
+        </button>
+        <button id="btn-gravity" class="ctrl-btn active" title="Toggle Gravity">
+          <span class="ctrl-icon">◎</span>
+          <span class="ctrl-label">GRAVITY</span>
+        </button>
+        <button id="btn-trails" class="ctrl-btn active" title="Toggle Trails">
+          <span class="ctrl-icon">〰</span>
+          <span class="ctrl-label">TRAILS</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Center Welcome (fades out) -->
+    <div id="welcome" class="welcome">
+      <h1 class="welcome-title">
+        <span class="letter" style="--delay:0">E</span>
+        <span class="letter" style="--delay:1">X</span>
+        <span class="letter" style="--delay:2">P</span>
+        <span class="letter" style="--delay:3">L</span>
+        <span class="letter" style="--delay:4">O</span>
+        <span class="letter" style="--delay:5">R</span>
+        <span class="letter" style="--delay:6">E</span>
+        <span class="letter-space"></span>
+        <span class="letter" style="--delay:8">T</span>
+        <span class="letter" style="--delay:9">H</span>
+        <span class="letter" style="--delay:10">E</span>
+        <span class="letter-space"></span>
+        <span class="letter" style="--delay:12">C</span>
+        <span class="letter" style="--delay:13">O</span>
+        <span class="letter" style="--delay:14">S</span>
+        <span class="letter" style="--delay:15">M</span>
+        <span class="letter" style="--delay:16">O</span>
+        <span class="letter" style="--delay:17">S</span>
+      </h1>
+      <p class="welcome-sub">Move your cursor to shape the universe</p>
+      <div class="welcome-hint">
+        <span class="hint-icon">↕</span>
+        <span>Scroll to warp through dimensions</span>
+      </div>
+    </div>
+
+    <!-- Bottom Stats -->
+    <footer class="bottom-bar">
+      <div class="stat">
+        <span class="stat-label">PARTICLES</span>
+        <span class="stat-value" id="stat-particles">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">FPS</span>
+        <span class="stat-value" id="stat-fps">60</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">DIMENSION</span>
+        <span class="stat-value" id="stat-dimension">NEBULA</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">VELOCITY</span>
+        <span class="stat-value" id="stat-velocity">0.00</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Color Palette Indicator -->
+  <div id="palette-indicator" class="palette-indicator hidden">
+    <div class="palette-dots"></div>
+    <span class="palette-name"></span>
+  </div>
+
+  <script src="cosmos.js"></script>
+  <script src="aurora.js"></script>
+  <script src="audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
