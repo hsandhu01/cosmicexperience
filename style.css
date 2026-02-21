@@ -1,5 +1,5 @@
 /* ============================================
-   COSMOS — Interactive Aurora Experience
+   COSMOS — Sleep & Relaxation Experience
    Design System & Styles
    ============================================ */
 
@@ -20,13 +20,16 @@
   --font-mono: 'Space Mono', monospace;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -88,7 +91,7 @@ html, body {
 }
 
 .loader-ring::after {
-  content: '✦';
+  content: '☽';
   position: absolute;
   inset: 0;
   display: flex;
@@ -100,12 +103,23 @@ html, body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .loader-title {
@@ -115,7 +129,7 @@ html, body {
   text-indent: 1.2em;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-4));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -130,7 +144,9 @@ html, body {
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ============================================
@@ -144,9 +160,19 @@ canvas {
   height: 100%;
 }
 
-#cosmos { z-index: 1; }
-#aurora { z-index: 2; pointer-events: none; }
-#audioViz { z-index: 3; pointer-events: none; }
+#cosmos {
+  z-index: 1;
+}
+
+#aurora {
+  z-index: 2;
+  pointer-events: none;
+}
+
+#audioViz {
+  z-index: 3;
+  pointer-events: none;
+}
 
 /* ============================================
    UI Overlay
@@ -190,8 +216,17 @@ canvas {
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.6; transform: rotate(0deg) scale(1); }
-  50% { opacity: 1; transform: rotate(180deg) scale(1.3); }
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: rotate(15deg) scale(1.1);
+  }
 }
 
 .logo-text {
@@ -199,6 +234,15 @@ canvas {
   font-weight: 600;
   letter-spacing: 0.5em;
   color: var(--text-primary);
+}
+
+.logo-tagline {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: var(--accent-2);
+  opacity: 0.7;
+  text-transform: uppercase;
 }
 
 .controls {
@@ -326,14 +370,22 @@ canvas {
     opacity: 1;
     transform: translateY(0);
   }
+
   from {
     transform: translateY(10px);
   }
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* ============================================
@@ -409,7 +461,7 @@ canvas {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .palette-name {
@@ -417,6 +469,146 @@ canvas {
   font-size: 0.7rem;
   color: var(--text-secondary);
   letter-spacing: 0.2em;
+}
+
+/* ============================================
+   Sleep Timer Panel
+   ============================================ */
+
+.timer-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  z-index: 300;
+  background: rgba(5, 2, 20, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  min-width: 320px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.timer-panel.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.timer-panel.hidden {
+  display: none;
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.timer-title {
+  font-size: 1rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: var(--text-primary);
+}
+
+.timer-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.3s ease;
+}
+
+.timer-close:hover {
+  color: var(--text-primary);
+}
+
+.timer-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.timer-option {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  transition: all 0.3s ease;
+}
+
+.timer-option:hover {
+  background: var(--glass-hover);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  transform: translateY(-2px);
+}
+
+.timer-option.selected {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+.timer-display {
+  margin-top: 1.5rem;
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.timer-display.hidden {
+  display: none;
+}
+
+.timer-remaining {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 200;
+  color: var(--accent-2);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.timer-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.timer-cancel {
+  margin-top: 1rem;
+  background: none;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: var(--accent-3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  transition: all 0.3s ease;
+}
+
+.timer-cancel:hover {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: var(--accent-3);
 }
 
 /* ============================================
@@ -466,4 +658,6 @@ canvas {
 /* ============================================
    Scrollbar (hidden)
    ============================================ */
-::-webkit-scrollbar { display: none; }
+::-webkit-scrollbar {
+  display: none;
+}
