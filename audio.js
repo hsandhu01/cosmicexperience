@@ -1,7 +1,8 @@
 /* ============================================
    COSMOS — Ambient Sleep Soundscape Engine
-   Binaural beats, pink noise, ambient pads,
-   rain textures, and a sleep timer.
+   Full mixer with 9 sound layers:
+   Pink noise, Rain, Binaural beats, Dream pads,
+   Breathing tone, Ocean, Thunderstorm, Forest, Fireplace
    ============================================ */
 
 const AudioEngine = (() => {
@@ -14,40 +15,45 @@ const AudioEngine = (() => {
   let dataArray = null;
   let bufferLength = 0;
 
-  // Active audio nodes
-  let activeNodes = [];
+  // Individual layer tracking
+  const layers = {};
+  const layerDefaults = {
+    'pink-noise': 0.35,
+    'rain': 0.5,
+    'binaural': 0.06,
+    'pads': 1.0,
+    'breath': 1.0,
+    'ocean': 0,
+    'thunder': 0,
+    'forest': 0,
+    'fireplace': 0
+  };
+  const layerVolumes = { ...layerDefaults };
+
+  // Pad oscillators for chord transitions
+  let padNodes = [];
+  let lfoNodes = [];
 
   // ───── AMBIENT PAD CONFIG ─────
-  // Dreamy, slow-evolving chord voicings (very low frequencies for sleep)
   const chordProgressions = [
-    // Cmaj9 - ethereal
     [65.41, 82.41, 98.00, 130.81, 146.83],
-    // Am7 - melancholic calm
     [55.00, 69.30, 82.41, 110.00, 130.81],
-    // Fmaj7 - warm resolve
     [43.65, 65.41, 82.41, 110.00, 130.81],
-    // Dm9 - soft drift
     [36.71, 55.00, 73.42, 87.31, 110.00],
-    // G7sus4 - floating
     [49.00, 65.41, 73.42, 98.00, 110.00],
-    // Em11 - vast, open
     [41.20, 55.00, 73.42, 82.41, 98.00],
   ];
 
   let currentChord = 0;
   let chordTimer = null;
 
-  // Binaural beat config (delta waves for deep sleep: 0.5-4 Hz)
-  const binauralConfig = {
-    baseFreq: 120,     // base tone Hz
-    beatFreq: 2.5,     // difference Hz (delta wave ~ deep sleep)
-  };
+  const binauralConfig = { baseFreq: 120, beatFreq: 2.5 };
 
   // ───── SLEEP TIMER ─────
   let sleepTimerMinutes = 0;
   let sleepTimerEnd = 0;
   let sleepTimerInterval = null;
-  let fadeOutDuration = 60; // seconds to fade out at end
+  let fadeOutDuration = 60;
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -76,15 +82,30 @@ const AudioEngine = (() => {
     analyser.connect(audioCtx.destination);
   }
 
-  // ───── PINK NOISE GENERATOR ─────
+  // ───── LAYER GAIN HELPER ─────
+  function createLayerGain(layerName) {
+    const gain = audioCtx.createGain();
+    gain.gain.value = layerVolumes[layerName];
+    gain.connect(masterGain);
+    layers[layerName] = { gain, sources: [] };
+    return gain;
+  }
+
+  function addSource(layerName, source) {
+    if (layers[layerName]) {
+      layers[layerName].sources.push(source);
+    }
+  }
+
+  // ───── PINK NOISE ─────
   function createPinkNoise() {
+    const gain = createLayerGain('pink-noise');
     const bufferSize = audioCtx.sampleRate * 4;
     const buffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
 
     for (let ch = 0; ch < 2; ch++) {
       const data = buffer.getChannelData(ch);
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
@@ -101,37 +122,26 @@ const AudioEngine = (() => {
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
-
-    // Filter to make it extra soft and warm
-    const lpFilter = audioCtx.createBiquadFilter();
-    lpFilter.type = 'lowpass';
-    lpFilter.frequency.value = 400;
-    lpFilter.Q.value = 0.5;
-
-    const gain = audioCtx.createGain();
-    gain.gain.value = 0;
-    gain.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 4);
-
-    source.connect(lpFilter);
-    lpFilter.connect(gain);
-    gain.connect(masterGain);
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 400;
+    lp.Q.value = 0.5;
+    source.connect(lp);
+    lp.connect(gain);
     source.start();
-
-    activeNodes.push({ node: source, gain, type: 'pink-noise' });
-    return { source, gain, filter: lpFilter };
+    addSource('pink-noise', source);
   }
 
-  // ───── RAIN TEXTURE GENERATOR ─────
+  // ───── RAIN ─────
   function createRainTexture() {
+    const gain = createLayerGain('rain');
     const bufferSize = audioCtx.sampleRate * 6;
     const buffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
 
     for (let ch = 0; ch < 2; ch++) {
       const data = buffer.getChannelData(ch);
       for (let i = 0; i < bufferSize; i++) {
-        // Random rain drops — sparse crackle pattern
         const drop = Math.random() < 0.003 ? (Math.random() * 0.5 - 0.25) : 0;
-        // Continuous soft wash
         const wash = (Math.random() * 2 - 1) * 0.008;
         data[i] = drop + wash;
       }
@@ -140,166 +150,326 @@ const AudioEngine = (() => {
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
-
-    const hpFilter = audioCtx.createBiquadFilter();
-    hpFilter.type = 'highpass';
-    hpFilter.frequency.value = 2000;
-
-    const lpFilter = audioCtx.createBiquadFilter();
-    lpFilter.type = 'lowpass';
-    lpFilter.frequency.value = 8000;
-
-    const gain = audioCtx.createGain();
-    gain.gain.value = 0;
-    gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 5);
-
-    source.connect(hpFilter);
-    hpFilter.connect(lpFilter);
-    lpFilter.connect(gain);
-    gain.connect(masterGain);
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2000;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 8000;
+    source.connect(hp);
+    hp.connect(lp);
+    lp.connect(gain);
     source.start();
-
-    activeNodes.push({ node: source, gain, type: 'rain' });
-    return { source, gain };
+    addSource('rain', source);
   }
 
-  // ───── BINAURAL BEATS (DELTA WAVES) ─────
+  // ───── BINAURAL BEATS ─────
   function createBinauralBeats() {
+    const gain = createLayerGain('binaural');
     const { baseFreq, beatFreq } = binauralConfig;
 
-    // Left ear
-    const oscLeft = audioCtx.createOscillator();
-    oscLeft.type = 'sine';
-    oscLeft.frequency.value = baseFreq;
-    const gainLeft = audioCtx.createGain();
-    gainLeft.gain.value = 0;
-    gainLeft.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 6);
-    const panLeft = audioCtx.createStereoPanner();
-    panLeft.pan.value = -1;
-    oscLeft.connect(gainLeft);
-    gainLeft.connect(panLeft);
-    panLeft.connect(masterGain);
-    oscLeft.start();
+    const oscL = audioCtx.createOscillator();
+    oscL.type = 'sine';
+    oscL.frequency.value = baseFreq;
+    const panL = audioCtx.createStereoPanner();
+    panL.pan.value = -1;
+    oscL.connect(panL);
+    panL.connect(gain);
+    oscL.start();
 
-    // Right ear (offset by beatFreq for binaural effect)
-    const oscRight = audioCtx.createOscillator();
-    oscRight.type = 'sine';
-    oscRight.frequency.value = baseFreq + beatFreq;
-    const gainRight = audioCtx.createGain();
-    gainRight.gain.value = 0;
-    gainRight.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 6);
-    const panRight = audioCtx.createStereoPanner();
-    panRight.pan.value = 1;
-    oscRight.connect(gainRight);
-    gainRight.connect(panRight);
-    panRight.connect(masterGain);
-    oscRight.start();
+    const oscR = audioCtx.createOscillator();
+    oscR.type = 'sine';
+    oscR.frequency.value = baseFreq + beatFreq;
+    const panR = audioCtx.createStereoPanner();
+    panR.pan.value = 1;
+    oscR.connect(panR);
+    panR.connect(gain);
+    oscR.start();
 
-    activeNodes.push(
-      { node: oscLeft, gain: gainLeft, type: 'binaural' },
-      { node: oscRight, gain: gainRight, type: 'binaural' }
-    );
+    addSource('binaural', oscL);
+    addSource('binaural', oscR);
   }
 
-  // ───── AMBIENT DREAM PADS ─────
+  // ───── DREAM PADS ─────
   function createDreamPad(freqs) {
-    const padNodes = [];
+    if (!layers['pads']) createLayerGain('pads');
+    const padGain = layers['pads'].gain;
 
     freqs.forEach((freq, i) => {
-      // Detuned pad voices for width
-      [-4, 0, 4].forEach(detuneCents => {
+      [-4, 0, 4].forEach(detune => {
         const osc = audioCtx.createOscillator();
         osc.type = 'sine';
         osc.frequency.value = freq;
-        osc.detune.value = detuneCents + (Math.random() * 2 - 1);
+        osc.detune.value = detune + (Math.random() * 2 - 1);
 
-        // Slow LFO on frequency for organic drift
         const lfo = audioCtx.createOscillator();
         lfo.type = 'sine';
         lfo.frequency.value = 0.05 + Math.random() * 0.08;
         const lfoGain = audioCtx.createGain();
-        lfoGain.gain.value = freq * 0.003; // very subtle pitch drift
+        lfoGain.gain.value = freq * 0.003;
         lfo.connect(lfoGain);
         lfoGain.connect(osc.frequency);
         lfo.start();
 
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0;
+        const g = audioCtx.createGain();
+        g.gain.value = 0;
+        const targetVol = 0.02 / (i + 1);
+        g.gain.linearRampToValueAtTime(targetVol, audioCtx.currentTime + 8 + i * 0.5);
 
-        // Slow fade in over 8 seconds
-        const targetVol = 0.02 / (i + 1); // higher partials quieter
-        gain.gain.linearRampToValueAtTime(targetVol, audioCtx.currentTime + 8 + i * 0.5);
-
-        osc.connect(gain);
-        gain.connect(masterGain);
+        osc.connect(g);
+        g.connect(padGain);
         osc.start();
 
-        padNodes.push({ node: osc, gain, type: 'pad' });
-        activeNodes.push({ node: osc, gain, type: 'pad' });
-        activeNodes.push({ node: lfo, gain: lfoGain, type: 'lfo' });
+        padNodes.push({ osc, gain: g });
+        lfoNodes.push({ osc: lfo, gain: lfoGain });
       });
     });
-
-    return padNodes;
   }
 
-  // ───── CHORD TRANSITIONS ─────
   function transitionToNextChord() {
     currentChord = (currentChord + 1) % chordProgressions.length;
-
-    // Fade out existing pads
-    const pads = activeNodes.filter(n => n.type === 'pad');
-    pads.forEach(({ node, gain }) => {
+    padNodes.forEach(({ osc, gain }) => {
       gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
-      setTimeout(() => {
-        try { node.stop(); } catch (e) {}
-      }, 7000);
+      setTimeout(() => { try { osc.stop(); } catch(e) {} }, 7000);
     });
-
-    // Remove faded pads from active list
+    const oldLfos = [...lfoNodes];
     setTimeout(() => {
-      activeNodes = activeNodes.filter(n => n.type !== 'pad' && n.type !== 'lfo');
+      oldLfos.forEach(({ osc }) => { try { osc.stop(); } catch(e) {} });
     }, 7500);
-
-    // Start new chord after crossfade gap
+    padNodes = [];
+    lfoNodes = [];
     setTimeout(() => {
-      if (isPlaying) {
-        createDreamPad(chordProgressions[currentChord]);
-      }
+      if (isPlaying) createDreamPad(chordProgressions[currentChord]);
     }, 4000);
   }
 
-  // ───── BREATHING GUIDE (subtle volume pulse) ─────
+  // ───── BREATHING TONE ─────
   function createBreathingPulse() {
-    // 4-7-8 breathing pattern encoded as volume LFO
-    // ~19 second cycle
-    const breathOsc = audioCtx.createOscillator();
-    breathOsc.type = 'sine';
-    breathOsc.frequency.value = 174.61; // F3 — healing frequency
+    const gain = createLayerGain('breath');
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 174.61;
 
-    const breathGain = audioCtx.createGain();
-    breathGain.gain.value = 0;
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 1 / 12;
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.012;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    lfo.start();
 
-    // Very gentle volume modulation
-    const breathLfo = audioCtx.createOscillator();
-    breathLfo.type = 'sine';
-    breathLfo.frequency.value = 1 / 12; // ~12 second breath cycle
-    const breathLfoGain = audioCtx.createGain();
-    breathLfoGain.gain.value = 0.012;
-    breathLfo.connect(breathLfoGain);
-    breathLfoGain.connect(breathGain.gain);
-    breathLfo.start();
+    const innerGain = audioCtx.createGain();
+    innerGain.gain.value = 0;
+    innerGain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 10);
+    osc.connect(innerGain);
+    innerGain.connect(gain);
+    osc.start();
 
-    breathGain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 10);
+    addSource('breath', osc);
+    addSource('breath', lfo);
+  }
 
-    breathOsc.connect(breathGain);
-    breathGain.connect(masterGain);
-    breathOsc.start();
+  // ───── OCEAN WAVES ─────
+  function createOceanWaves() {
+    const gain = createLayerGain('ocean');
+    const bufferSize = audioCtx.sampleRate * 8;
+    const buffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
 
-    activeNodes.push(
-      { node: breathOsc, gain: breathGain, type: 'breath' },
-      { node: breathLfo, gain: breathLfoGain, type: 'lfo' }
-    );
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      const waveLen = audioCtx.sampleRate * 6; // ~6 second wave period
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        // Wave envelope: slow swell + retreat
+        const phase = (i % waveLen) / waveLen;
+        const envelope = Math.pow(Math.sin(phase * Math.PI), 1.5) * 0.7 + 0.1;
+        // Secondary micro-waves
+        const micro = Math.sin(i / (audioCtx.sampleRate * 0.8)) * 0.15 + 0.85;
+        data[i] = white * 0.04 * envelope * micro;
+      }
+    }
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    // Warm filter for ocean depth
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 800;
+    lp.Q.value = 0.7;
+
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 60;
+
+    source.connect(hp);
+    hp.connect(lp);
+    lp.connect(gain);
+    source.start();
+    addSource('ocean', source);
+  }
+
+  // ───── THUNDERSTORM ─────
+  function createThunderstorm() {
+    const gain = createLayerGain('thunder');
+
+    // Base: deep rumble noise
+    const rumbleSize = audioCtx.sampleRate * 10;
+    const rumbleBuffer = audioCtx.createBuffer(2, rumbleSize, audioCtx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = rumbleBuffer.getChannelData(ch);
+      for (let i = 0; i < rumbleSize; i++) {
+        const white = Math.random() * 2 - 1;
+        // Slow thunder roll envelope
+        const roll = Math.sin((i / rumbleSize) * Math.PI * 3) * 0.5 + 0.5;
+        const crack = Math.random() < 0.0001 ? Math.random() * 0.8 : 0;
+        data[i] = (white * 0.025 * roll) + crack * 0.3;
+      }
+    }
+
+    const rumble = audioCtx.createBufferSource();
+    rumble.buffer = rumbleBuffer;
+    rumble.loop = true;
+
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 200;
+    lp.Q.value = 0.3;
+
+    rumble.connect(lp);
+    lp.connect(gain);
+    rumble.start();
+
+    // Rain layer specific to storm (heavier)
+    const rainSize = audioCtx.sampleRate * 4;
+    const rainBuffer = audioCtx.createBuffer(2, rainSize, audioCtx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = rainBuffer.getChannelData(ch);
+      for (let i = 0; i < rainSize; i++) {
+        const drop = Math.random() < 0.008 ? (Math.random() * 0.4 - 0.2) : 0;
+        const wash = (Math.random() * 2 - 1) * 0.012;
+        data[i] = drop + wash;
+      }
+    }
+
+    const rain = audioCtx.createBufferSource();
+    rain.buffer = rainBuffer;
+    rain.loop = true;
+    const rainHp = audioCtx.createBiquadFilter();
+    rainHp.type = 'highpass';
+    rainHp.frequency.value = 1500;
+    rain.connect(rainHp);
+    rainHp.connect(gain);
+    rain.start();
+
+    addSource('thunder', rumble);
+    addSource('thunder', rain);
+  }
+
+  // ───── FOREST ─────
+  function createForest() {
+    const gain = createLayerGain('forest');
+
+    // Wind through trees
+    const windSize = audioCtx.sampleRate * 8;
+    const windBuffer = audioCtx.createBuffer(2, windSize, audioCtx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = windBuffer.getChannelData(ch);
+      for (let i = 0; i < windSize; i++) {
+        const white = Math.random() * 2 - 1;
+        const gust = Math.sin(i / (audioCtx.sampleRate * 4) * Math.PI) * 0.4 + 0.6;
+        const rustle = Math.sin(i / (audioCtx.sampleRate * 0.3)) * 0.1 + 0.9;
+        data[i] = white * 0.015 * gust * rustle;
+      }
+    }
+
+    const wind = audioCtx.createBufferSource();
+    wind.buffer = windBuffer;
+    wind.loop = true;
+    const windLp = audioCtx.createBiquadFilter();
+    windLp.type = 'lowpass';
+    windLp.frequency.value = 1200;
+    const windHp = audioCtx.createBiquadFilter();
+    windHp.type = 'highpass';
+    windHp.frequency.value = 100;
+    wind.connect(windHp);
+    windHp.connect(windLp);
+    windLp.connect(gain);
+    wind.start();
+
+    // Bird chirps: very subtle, sparse sine blips
+    const chirpSize = audioCtx.sampleRate * 12;
+    const chirpBuffer = audioCtx.createBuffer(2, chirpSize, audioCtx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = chirpBuffer.getChannelData(ch);
+      for (let i = 0; i < chirpSize; i++) {
+        // Sparse chirps
+        if (Math.random() < 0.00003) {
+          const chirpLen = Math.floor(audioCtx.sampleRate * (0.05 + Math.random() * 0.1));
+          const freq = 2000 + Math.random() * 3000;
+          for (let j = 0; j < chirpLen && (i + j) < chirpSize; j++) {
+            const env = Math.sin((j / chirpLen) * Math.PI);
+            data[i + j] += Math.sin((i + j) * freq * Math.PI * 2 / audioCtx.sampleRate) * 0.02 * env;
+          }
+        }
+      }
+    }
+
+    const chirps = audioCtx.createBufferSource();
+    chirps.buffer = chirpBuffer;
+    chirps.loop = true;
+    chirps.connect(gain);
+    chirps.start();
+
+    addSource('forest', wind);
+    addSource('forest', chirps);
+  }
+
+  // ───── FIREPLACE ─────
+  function createFireplace() {
+    const gain = createLayerGain('fireplace');
+
+    const bufferSize = audioCtx.sampleRate * 6;
+    const buffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
+
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let i = 0; i < bufferSize; i++) {
+        // Base crackle
+        const crackle = Math.random() < 0.01
+          ? (Math.random() * 0.6 - 0.3) * Math.exp(-Math.random() * 5)
+          : 0;
+        // Warm rumble
+        const rumble = (Math.random() * 2 - 1) * 0.006;
+        // Pop
+        const pop = Math.random() < 0.0005
+          ? (Math.random() * 0.4 - 0.2)
+          : 0;
+        data[i] = crackle + rumble + pop;
+      }
+    }
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    // Warm, low-passed for cozy feeling
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 3000;
+    lp.Q.value = 0.4;
+
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 80;
+
+    source.connect(hp);
+    hp.connect(lp);
+    lp.connect(gain);
+    source.start();
+    addSource('fireplace', source);
   }
 
   // ───── PLAY / STOP ─────
@@ -308,27 +478,23 @@ const AudioEngine = (() => {
     createAudioContext();
     isPlaying = true;
 
-    // Gentle master fade in
     masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
     masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
     masterGain.gain.linearRampToValueAtTime(0.7, audioCtx.currentTime + 5);
 
-    // Layer 1: Pink noise bed
+    // Core layers
     createPinkNoise();
-
-    // Layer 2: Rain texture
     createRainTexture();
-
-    // Layer 3: Binaural beats (delta waves for deep sleep)
     createBinauralBeats();
-
-    // Layer 4: Dream pads
     createDreamPad(chordProgressions[currentChord]);
-
-    // Layer 5: Breathing guide tone
     createBreathingPulse();
 
-    // Evolve chords every 25 seconds
+    // Nature layers (start at 0 volume by default)
+    createOceanWaves();
+    createThunderstorm();
+    createForest();
+    createFireplace();
+
     chordTimer = setInterval(() => {
       if (isPlaying) transitionToNextChord();
     }, 25000);
@@ -340,52 +506,70 @@ const AudioEngine = (() => {
     clearInterval(chordTimer);
     clearSleepTimer();
 
-    // Gentle fade out
     if (masterGain) {
       masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
     }
 
     setTimeout(() => {
-      activeNodes.forEach(({ node, gain }) => {
-        try {
-          gain.gain.value = 0;
-          node.stop();
-        } catch (e) {}
+      Object.values(layers).forEach(layer => {
+        layer.sources.forEach(s => {
+          try { s.stop(); } catch(e) {}
+        });
+        layer.sources = [];
       });
-      activeNodes = [];
+      padNodes.forEach(({ osc }) => { try { osc.stop(); } catch(e) {} });
+      lfoNodes.forEach(({ osc }) => { try { osc.stop(); } catch(e) {} });
+      padNodes = [];
+      lfoNodes = [];
+      // Clear layer references
+      Object.keys(layers).forEach(k => delete layers[k]);
     }, 3500);
   }
 
   function toggle() {
-    if (isPlaying) {
-      stopAmbient();
-    } else {
-      playAmbient();
-    }
+    if (isPlaying) stopAmbient();
+    else playAmbient();
     return isPlaying;
+  }
+
+  // ───── MIXER API ─────
+  function setLayerVolume(layerName, value) {
+    // value: 0.0 to 1.0
+    layerVolumes[layerName] = value;
+    if (layers[layerName]) {
+      layers[layerName].gain.gain.linearRampToValueAtTime(
+        value, audioCtx ? audioCtx.currentTime + 0.1 : 0
+      );
+    }
+  }
+
+  function getLayerVolumes() {
+    return { ...layerVolumes };
+  }
+
+  function getLayerNames() {
+    return [
+      { id: 'pink-noise', label: 'Pink Noise', icon: '〰', group: 'core' },
+      { id: 'rain', label: 'Rain', icon: '🌧', group: 'core' },
+      { id: 'binaural', label: 'Binaural', icon: '🧠', group: 'core' },
+      { id: 'pads', label: 'Dream Pads', icon: '✧', group: 'core' },
+      { id: 'breath', label: 'Breath Tone', icon: '🫁', group: 'core' },
+      { id: 'ocean', label: 'Ocean', icon: '🌊', group: 'nature' },
+      { id: 'thunder', label: 'Thunder', icon: '⛈', group: 'nature' },
+      { id: 'forest', label: 'Forest', icon: '🌲', group: 'nature' },
+      { id: 'fireplace', label: 'Fire', icon: '🔥', group: 'nature' },
+    ];
   }
 
   // ───── SLEEP TIMER ─────
   function setSleepTimer(minutes) {
     clearSleepTimer();
-    if (minutes <= 0) {
-      sleepTimerMinutes = 0;
-      return;
-    }
-
+    if (minutes <= 0) { sleepTimerMinutes = 0; return; }
     sleepTimerMinutes = minutes;
     sleepTimerEnd = Date.now() + minutes * 60 * 1000;
-
     sleepTimerInterval = setInterval(() => {
       const remaining = sleepTimerEnd - Date.now();
-
-      if (remaining <= 0) {
-        stopAmbient();
-        clearSleepTimer();
-        return;
-      }
-
-      // Start fading out in the last 60 seconds
+      if (remaining <= 0) { stopAmbient(); clearSleepTimer(); return; }
       if (remaining <= fadeOutDuration * 1000 && masterGain) {
         const fadeProgress = remaining / (fadeOutDuration * 1000);
         masterGain.gain.linearRampToValueAtTime(0.7 * fadeProgress, audioCtx.currentTime + 1);
@@ -403,50 +587,38 @@ const AudioEngine = (() => {
   function getSleepTimerRemaining() {
     if (!sleepTimerEnd) return null;
     const remaining = Math.max(0, sleepTimerEnd - Date.now());
-    const mins = Math.floor(remaining / 60000);
-    const secs = Math.floor((remaining % 60000) / 1000);
-    return { mins, secs, total: remaining };
+    return { mins: Math.floor(remaining / 60000), secs: Math.floor((remaining % 60000) / 1000), total: remaining };
   }
 
-  // ───── VISUALIZER RENDER ─────
+  // ───── VISUALIZER ─────
   function render() {
     ctx.clearRect(0, 0, width, height);
     if (!isPlaying || !analyser || !dataArray) return;
-
     analyser.getByteFrequencyData(dataArray);
 
     const centerX = width / 2;
     const centerY = height / 2;
     const maxRadius = Math.min(width, height) * 0.2;
+    const time = Date.now() * 0.0003;
 
     ctx.save();
 
-    // Soft orbital rings — dreamy, slow
-    const ringCount = 4;
-    const time = Date.now() * 0.0003;
-
-    for (let ring = 0; ring < ringCount; ring++) {
-      const ringRadius = maxRadius * (0.4 + ring * 0.2);
+    // Soft orbital rings
+    for (let ring = 0; ring < 4; ring++) {
+      const r = maxRadius * (0.4 + ring * 0.2);
       const segments = 64;
-      const angleStep = (Math.PI * 2) / segments;
-
       ctx.beginPath();
       for (let i = 0; i <= segments; i++) {
-        const angle = i * angleStep + time * (0.3 + ring * 0.1);
-        const dataIdx = Math.floor((i / segments) * bufferLength * 0.5);
-        const value = (dataArray[dataIdx] || 0) / 255;
+        const angle = (i / segments) * Math.PI * 2 + time * (0.3 + ring * 0.1);
+        const idx = Math.floor((i / segments) * bufferLength * 0.5);
+        const value = (dataArray[idx] || 0) / 255;
         const wobble = value * maxRadius * 0.15;
-        const r = ringRadius + wobble;
-
-        const x = centerX + Math.cos(angle) * r;
-        const y = centerY + Math.sin(angle) * r;
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        const x = centerX + Math.cos(angle) * (r + wobble);
+        const y = centerY + Math.sin(angle) * (r + wobble);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.closePath();
-
-      const hue = 220 + ring * 30; // cool blue-purple tones
+      const hue = 220 + ring * 30;
       ctx.strokeStyle = `hsla(${hue}, 60%, 70%, ${0.12 - ring * 0.02})`;
       ctx.lineWidth = 1.5;
       ctx.shadowColor = `hsla(${hue}, 60%, 70%, 0.15)`;
@@ -454,36 +626,29 @@ const AudioEngine = (() => {
       ctx.stroke();
     }
 
-    // Central breathing glow
+    // Central glow
     const bass = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / (4 * 255);
-    const breathRadius = maxRadius * (0.25 + bass * 0.15);
-    const breathGlow = ctx.createRadialGradient(
-      centerX, centerY, 0,
-      centerX, centerY, breathRadius
-    );
-    breathGlow.addColorStop(0, `rgba(147, 130, 220, ${bass * 0.12})`);
-    breathGlow.addColorStop(0.5, `rgba(100, 140, 200, ${bass * 0.06})`);
-    breathGlow.addColorStop(1, 'transparent');
-    ctx.fillStyle = breathGlow;
+    const br = maxRadius * (0.25 + bass * 0.15);
+    const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, br);
+    glow.addColorStop(0, `rgba(147, 130, 220, ${bass * 0.12})`);
+    glow.addColorStop(0.5, `rgba(100, 140, 200, ${bass * 0.06})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, breathRadius, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, br, 0, Math.PI * 2);
     ctx.fill();
 
-    // Floating frequency dots
+    // Frequency dots
     for (let i = 0; i < bufferLength; i += 4) {
       const value = dataArray[i] / 255;
       if (value < 0.1) continue;
-
       const angle = (i / bufferLength) * Math.PI * 2 + time * 0.5;
       const dist = maxRadius * 0.3 + value * maxRadius * 0.5;
       const x = centerX + Math.cos(angle) * dist;
       const y = centerY + Math.sin(angle) * dist;
-      const dotSize = value * 2.5 + 0.5;
-
-      const hue = 200 + (i / bufferLength) * 80;
-      ctx.fillStyle = `hsla(${hue}, 50%, 75%, ${value * 0.3})`;
+      ctx.fillStyle = `hsla(${200 + (i / bufferLength) * 80}, 50%, 75%, ${value * 0.3})`;
       ctx.beginPath();
-      ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+      ctx.arc(x, y, value * 2.5 + 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -494,6 +659,7 @@ const AudioEngine = (() => {
 
   return {
     init, render, toggle, getIsPlaying,
-    setSleepTimer, getSleepTimerRemaining, clearSleepTimer
+    setSleepTimer, getSleepTimerRemaining, clearSleepTimer,
+    setLayerVolume, getLayerVolumes, getLayerNames
   };
 })();

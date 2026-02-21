@@ -36,6 +36,9 @@
     <!-- Aurora Overlay Canvas -->
     <canvas id="aurora"></canvas>
 
+    <!-- Dim Mode Overlay -->
+    <div id="dim-overlay" class="dim-overlay"></div>
+
     <!-- UI Overlay -->
     <div id="ui-overlay">
         <!-- Top Bar -->
@@ -46,25 +49,29 @@
                 <span class="logo-tagline">sleep</span>
             </div>
             <div class="controls">
-                <button id="btn-mode" class="ctrl-btn" title="Switch Theme (M)">
-                    <span class="ctrl-icon">◐</span>
-                    <span class="ctrl-label">THEME</span>
-                </button>
                 <button id="btn-audio" class="ctrl-btn pulse-hint" title="Toggle Soundscape (A)">
                     <span class="ctrl-icon">🌙</span>
                     <span class="ctrl-label">SLEEP</span>
+                </button>
+                <button id="btn-mixer" class="ctrl-btn" title="Sound Mixer (X)">
+                    <span class="ctrl-icon">🎛</span>
+                    <span class="ctrl-label">MIX</span>
+                </button>
+                <button id="btn-breathe" class="ctrl-btn" title="Breathing Guide (B)">
+                    <span class="ctrl-icon">◯</span>
+                    <span class="ctrl-label">BREATHE</span>
                 </button>
                 <button id="btn-timer" class="ctrl-btn" title="Sleep Timer (S)">
                     <span class="ctrl-icon">◷</span>
                     <span class="ctrl-label">TIMER</span>
                 </button>
-                <button id="btn-gravity" class="ctrl-btn active" title="Toggle Gravity (G)">
-                    <span class="ctrl-icon">◎</span>
-                    <span class="ctrl-label">GRAVITY</span>
+                <button id="btn-dim" class="ctrl-btn" title="Dim Mode (D)">
+                    <span class="ctrl-icon">◐</span>
+                    <span class="ctrl-label">DIM</span>
                 </button>
-                <button id="btn-trails" class="ctrl-btn active" title="Toggle Trails (T)">
-                    <span class="ctrl-icon">〰</span>
-                    <span class="ctrl-label">TRAILS</span>
+                <button id="btn-mode" class="ctrl-btn" title="Switch Theme (M)">
+                    <span class="ctrl-icon">◑</span>
+                    <span class="ctrl-label">THEME</span>
                 </button>
             </div>
         </header>
@@ -100,6 +107,26 @@
             </div>
         </div>
 
+        <!-- Sound Mixer Panel -->
+        <div id="mixer-panel" class="mixer-panel hidden">
+            <div class="mixer-header">
+                <span class="mixer-title">Sound Mixer</span>
+                <button id="mixer-close" class="mixer-close">✕</button>
+            </div>
+            <div class="mixer-group">
+                <span class="mixer-group-label">CORE SOUNDS</span>
+            </div>
+            <div id="mixer-sliders" class="mixer-sliders">
+                <!-- Sliders populated by JS -->
+            </div>
+            <div class="mixer-group" style="margin-top: 1rem;">
+                <span class="mixer-group-label">NATURE SOUNDS</span>
+            </div>
+            <div id="mixer-sliders-nature" class="mixer-sliders">
+                <!-- Nature sliders populated by JS -->
+            </div>
+        </div>
+
         <!-- Sleep Timer Panel -->
         <div id="timer-panel" class="timer-panel hidden">
             <div class="timer-header">
@@ -121,6 +148,21 @@
             </div>
         </div>
 
+        <!-- Breathing Guide Overlay -->
+        <div id="breathing-guide" class="breathing-guide hidden">
+            <div class="breath-circle-outer">
+                <div class="breath-circle" id="breath-circle">
+                    <span class="breath-text" id="breath-text">Breathe In</span>
+                    <span class="breath-count" id="breath-count">4</span>
+                </div>
+            </div>
+            <div class="breath-controls">
+                <button class="breath-pattern-btn active" data-pattern="478" id="pattern-478">4-7-8</button>
+                <button class="breath-pattern-btn" data-pattern="44" id="pattern-44">4-4</button>
+                <button class="breath-close-btn" id="breathe-close">Close</button>
+            </div>
+        </div>
+
         <!-- Bottom Stats -->
         <footer class="bottom-bar">
             <div class="stat">
@@ -135,7 +177,7 @@
                 <span class="stat-label">DIMENSION</span>
                 <span class="stat-value" id="stat-dimension">NEBULA</span>
             </div>
-            <div class="stat" id="stat-timer-container" class="hidden">
+            <div class="stat">
                 <span class="stat-label">SLEEP TIMER</span>
                 <span class="stat-value" id="stat-timer">OFF</span>
             </div>
