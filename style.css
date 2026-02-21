@@ -201,6 +201,8 @@ canvas {
   justify-content: space-between;
   align-items: center;
   pointer-events: auto;
+  position: relative;
+  z-index: 500;
 }
 
 .logo {
@@ -421,6 +423,8 @@ canvas {
   justify-content: center;
   gap: 3rem;
   pointer-events: auto;
+  position: relative;
+  z-index: 500;
 }
 
 .stat {

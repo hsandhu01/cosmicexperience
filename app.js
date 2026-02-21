@@ -257,6 +257,18 @@
           break;
       }
     });
+
+    // Click outside panels to close them
+    document.addEventListener('click', (e) => {
+      // Close mixer if click is outside mixer panel and mixer button
+      if (mixerPanelOpen && !mixerPanel.contains(e.target) && !btnMixer.contains(e.target)) {
+        closeMixer();
+      }
+      // Close timer if click is outside timer panel and timer button
+      if (timerPanelOpen && !timerPanel.contains(e.target) && !btnTimer.contains(e.target)) {
+        closeTimer();
+      }
+    });
   }
 
   // ───── MIXER ─────
@@ -264,6 +276,7 @@
     mixerPanelOpen = !mixerPanelOpen;
     if (mixerPanelOpen) {
       if (timerPanelOpen) closeTimer();
+      if (breathingOn) stopBreathing();
       mixerPanel.classList.remove('hidden');
       requestAnimationFrame(() => mixerPanel.classList.add('show'));
       btnMixer.classList.add('active');
@@ -282,6 +295,7 @@
     timerPanelOpen = !timerPanelOpen;
     if (timerPanelOpen) {
       if (mixerPanelOpen) closeMixer();
+      if (breathingOn) stopBreathing();
       timerPanel.classList.remove('hidden');
       requestAnimationFrame(() => timerPanel.classList.add('show'));
     } else closeTimer();
@@ -317,6 +331,8 @@
   }
 
   function startBreathing() {
+    if (mixerPanelOpen) closeMixer();
+    if (timerPanelOpen) closeTimer();
     breathingOn = true;
     btnBreathe.classList.add('active');
     breathingGuide.classList.remove('hidden');
